@@ -1,21 +1,14 @@
 use rtest::*;
 
-#[make_answer(42)]
-fn test(input: i32) -> &str {
-}
-
-#[test]
-fn macro_works() {
-    answer()
-}
-
-#[derive(AnswerFn)]
+describe_suite!(describe_suite);
+test_if_it!("test1");
+#[derive(DataDriven)]
 struct Test {
     field1: i32,
 }
 
-#[test]
-fn build_test() {
-    let test = Test {field1: 42};
-    answer2(test);
+#[describe(42)]
+fn run_test_struct(input: i32) -> &str {
+    derived(test);
 }
+
