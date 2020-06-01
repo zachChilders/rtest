@@ -72,6 +72,40 @@ use syn::{braced, parse_macro_input, DeriveInput, Expr, Field, Ident, Result, To
 //     TokenStream::from(suite)
 // }
 
+#[proc_macro_derive(GenerateTestFn)]
+pub fn derive_data_driven_test(item: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(item as DeriveInput);
+    let fields = if let syn::Data::Struct(syn::DataStruct {
+        fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
+        ..
+    }) = ast.data
+    {
+        named
+    } else {
+        unimplemented!()
+    };
+
+    let assert = fields.iter().map(|f|{
+        let name = &f.ident;
+        let name_string = &f.ident.clone().unwrap().to_string();
+        quote!{ 
+            assert_eq!(self.#name, expected.#name, 
+                "{name}: {actual} is not {expected}", 
+                name=#name_string, 
+                actual=self.#name, 
+                expected=expected.#name); }
+    });
+
+    let test_fn = quote! {
+        impl Test {
+            fn equal(self, expected: Test) {
+                #(#assert)*
+            }
+        }
+    };
+    test_fn.into()
+}
+
 #[proc_macro_derive(DataDriven)]
 pub fn derive_data_driven(item: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(item as DeriveInput);
@@ -86,18 +120,17 @@ pub fn derive_data_driven(item: TokenStream) -> TokenStream {
     };
     eprintln!("{:#?}", fields);
 
-    let construct = fields.iter().map(|f|{
+    let construct = fields.iter().map(|f| {
         let name = &f.ident;
         let actual = 42;
-        quote!{ #name: #actual}
+        quote! { #name: #actual}
     });
 
-    let assert = fields.iter().map(|f|{
+    let assert = fields.iter().map(|f| {
         let name = &f.ident;
         let expected = 42;
-        quote!{ assert_eq!(#expected, test.#name); }
+        quote! { assert_eq!(#expected, test.#name); }
     });
-
 
     let test_cases = quote! {
         #[test]
