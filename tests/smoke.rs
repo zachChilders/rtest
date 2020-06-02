@@ -12,6 +12,7 @@ fn run_my_test() {
 }
 
 describe_suite!(
+    run_my_test,
     Test {
         a: 3,
     },

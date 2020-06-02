@@ -8,6 +8,7 @@ use syn::{braced, parse_macro_input, DeriveInput, Ident, Result, Token, Type, Li
 
 #[derive(Debug)]
 struct SuiteInput {
+    name_of_test: Ident,
     tests: Punctuated<Test, Token![,]>,
 }
 
