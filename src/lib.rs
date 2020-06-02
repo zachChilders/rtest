@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{braced, parse_macro_input, DeriveInput, Ident, Lit, Result, Token};
@@ -17,11 +17,11 @@ struct SuiteInput {
 struct Test {
     ident: Ident,
     brace_token: syn::token::Brace,
-    fields: Punctuated<Fields, Token![,]>,
+    fields: Punctuated<Field, Token![,]>,
 }
 
 #[derive(Clone, Debug)]
-struct Fields {
+struct Field {
     name: Ident,
     colon_token: Token![:],
     data: Lit,
@@ -46,7 +46,7 @@ impl Parse for Test {
 
         let ident = input.parse()?;
         let brace_token = braced!(content in input);
-        let fields = content.parse_terminated(Fields::parse)?;
+        let fields = content.parse_terminated(Field::parse)?;
 
         Ok(Test {
             ident,
@@ -56,9 +56,9 @@ impl Parse for Test {
     }
 }
 
-impl Parse for Fields {
+impl Parse for Field {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(Fields {
+        Ok(Field {
             name: input.parse()?,
             colon_token: input.parse()?,
             data: input.parse()?,
@@ -70,20 +70,23 @@ impl Parse for Fields {
 pub fn describe_suite(item: TokenStream) -> TokenStream {
     let suite = parse_macro_input!(item as SuiteInput);
     let suite_name = suite.test_name.clone();
-    println!("Suite: {:?}", suite);
+    println!("Suite: {:?}", suite.tests);
 
     let tests = suite.tests.iter().enumerate().map(|(i, f)| {
         let name = f.ident.clone();
         let test_name = format_ident!("{}_{}", name.to_string().to_lowercase(), i.to_string());
-        let fields = f.fields.clone();
-        quote!{
+        let fields = f.fields.iter().map(|f| {
+            let name = f.name.clone();
+            let value = f.data.clone();
+            quote! {
+                #name: #value,
+            }
+        });
+        quote! {
             #[test]
             fn #test_name() {
                 crate::#suite_name(crate::#name{
-                    a:23,
-                    b: String::from("asdf"),
-                    c: String::from("aeou"),
-                    d: true,
+                    #(#fields)*
                 })
             }
         }
