@@ -1,20 +1,29 @@
 use rtest::*;
 
-// struct TestSuite {
-//     name: String,
-//     test_name: String,
-// }
 
-//describe_suite!(asdf);
-#[derive(GenerateTestFn, DataDriven)]
+#[derive(GenerateTestFn)]
 struct Test {
     field1: i32,
     field2: i32,
 }
 
+fn run_my_test() {
+    println!("Hello World!");
+}
+
+describe_suite!(
+    Test {
+        a: 3,
+    },
+    Test {
+        b: 4,
+        c: 5,
+    }
+);
+
 #[test]
 fn run_constructed_test_function() {
-    let case = Test {
+    let expected = Test {
         field1: 32,
         field2: 42,
     };
@@ -23,5 +32,6 @@ fn run_constructed_test_function() {
         field1: 32,
         field2: 42,
     };
-    case.equal(actual)
+    expected.equal(&actual);
+    actual.equal(&expected);
 }

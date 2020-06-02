@@ -1,79 +1,88 @@
 extern crate proc_macro;
 
-#[allow(unused_imports)]
 use proc_macro::TokenStream;
-#[allow(unused_imports)]
-use quote::{format_ident, quote};
-#[allow(unused_imports)]
+use quote::quote;
 use syn::parse::{Parse, ParseStream};
-#[allow(unused_imports)]
 use syn::punctuated::Punctuated;
-#[allow(unused_imports)]
-use syn::{braced, parse_macro_input, DeriveInput, Expr, Field, Ident, Result, Token, Type};
+use syn::{braced, parse_macro_input, DeriveInput, Ident, Result, Token, Type, Lit};
 
-// struct TestSuite {
-//     name: String,
-//     test_name: String,
-// }
+#[derive(Debug)]
+struct SuiteInput {
+    tests: Punctuated<Test, Token![,]>,
+}
 
-// impl Parse for TestSuite {
-//     fn parse(input: ParseStream) -> Result<Self> {
-//         //let lookahead = input.lookahead1();
+#[derive(Debug)]
+struct Test {
+    ident: Ident,
+    brace_token: syn::token::Brace,
+    fields: Punctuated<Fields, Token![,]>,
 
-//         Ok(Self {
-//             name: String::from("hello"),
-//             test_name: String::from("world")
-//         })
-//     }
-// }
+}
 
-// #[proc_macro_attribute]
-// pub fn describe(attr: TokenStream, _item: TokenStream) -> TokenStream {
+#[derive(Debug)]
+struct Fields {
+    name: Ident,
+    colon_token: Token![:],
+    data: Lit,
+}
 
-//     let my_answer = attr.to_string().parse::<i32>().unwrap();
-//     let answer = quote! {
-//         #[test]
-//         fn test_suite() {
-//             assert_eq!(42, #my_answer);
-//         }
-//     };
-//     TokenStream::from(answer)
-// }
+impl Parse for SuiteInput {
+    fn parse(input: ParseStream) -> Result<Self> {
+       // let test_function = input.parse_terminated(Ident::parse)?;
+        let tests = input.parse_terminated(Test::parse)?;  
+        Ok(SuiteInput {
+            tests,
+        })
+    }
+}
 
-// #[proc_macro]
-// pub fn test_if_it(_item: TokenStream) -> TokenStream {
+impl Parse for Test {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
 
-//     let answer = quote! {
-//         #[test]
-//         fn if_test() {
-//             assert_eq!(42, 42);
-//         }
-//     };
-//     TokenStream::from(answer)
-// }
+        let ident = input.parse()?;
+        let brace_token = braced!(content in input);
+        let fields = content.parse_terminated(Fields::parse)?;  
 
-// #[proc_macro]
-// pub fn describe_suite(item: TokenStream) -> TokenStream {
+        Ok(Test {
+            ident,
+            brace_token,
+            fields,
+        })
+    }
+}
 
-//     eprintln!("{:?}", item);
-//     let suite_name = parse_macro_input!(item as Ident);
-//     // let suite_name = suite_repr.name;
-//     // let test_name = suite_repr.test_name;
+impl Parse for Fields {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(Fields {
+            name: input.parse()?,
+            colon_token: input.parse()?,
+            data: input.parse()?,
+        })
+    }
+}
 
-//     let suite = quote! {
-//         #[cfg(test)]
-//         mod #suite_name {
-//             #[test]
-//             fn test1() {
-//                 assert_eq!(43, 43);
-//             }
-//         }
-//     };
-//     TokenStream::from(suite)
-// }
+#[proc_macro]
+pub fn describe_suite(item: TokenStream) -> TokenStream {
+    let suite_name = parse_macro_input!(item as SuiteInput);
+    println!("Suite: {:?}", suite_name);
+
+    // let suite = quote! {
+    //     #[cfg(test)]
+    //     mod #suite_name {
+    //         #[test]
+    //         fn test_name1() {
+    //             assert_eq!(43, 43);
+    //         }
+    //     }
+    // };
+    // suite.into()
+    TokenStream::new()
+}
 
 #[proc_macro_derive(GenerateTestFn)]
 pub fn derive_data_driven_test(item: TokenStream) -> TokenStream {
+    println!("Raw input: {:?}", item.clone());
     let ast = parse_macro_input!(item as DeriveInput);
     let fields = if let syn::Data::Struct(syn::DataStruct {
         fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
@@ -85,62 +94,23 @@ pub fn derive_data_driven_test(item: TokenStream) -> TokenStream {
         unimplemented!()
     };
 
-    let assert = fields.iter().map(|f|{
+    let assert = fields.iter().map(|f| {
         let name = &f.ident;
         let name_string = &f.ident.clone().unwrap().to_string();
-        quote!{ 
-            assert_eq!(self.#name, expected.#name, 
-                "{name}: {actual} is not {expected}", 
-                name=#name_string, 
-                actual=self.#name, 
-                expected=expected.#name); }
+        quote! {
+        assert_eq!(self.#name, expected.#name,
+            "{name}: {actual} is not {expected}",
+            name=#name_string,
+            actual=self.#name,
+            expected=expected.#name); }
     });
 
     let test_fn = quote! {
         impl Test {
-            fn equal(self, expected: Test) {
+            fn equal(&self, expected: &Test) {
                 #(#assert)*
             }
         }
     };
     test_fn.into()
-}
-
-#[proc_macro_derive(DataDriven)]
-pub fn derive_data_driven(item: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(item as DeriveInput);
-    let fields = if let syn::Data::Struct(syn::DataStruct {
-        fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }),
-        ..
-    }) = ast.data
-    {
-        named
-    } else {
-        unimplemented!()
-    };
-    eprintln!("{:#?}", fields);
-
-    let construct = fields.iter().map(|f| {
-        let name = &f.ident;
-        let actual = 42;
-        quote! { #name: #actual}
-    });
-
-    let assert = fields.iter().map(|f| {
-        let name = &f.ident;
-        let expected = 42;
-        quote! { assert_eq!(#expected, test.#name); }
-    });
-
-    let test_cases = quote! {
-        #[test]
-        fn derived_test() {
-
-            let test = Test {
-                #(#construct,)*
-            };
-            #(#assert)*
-        }
-    };
-    test_cases.into()
 }
