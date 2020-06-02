@@ -88,7 +88,7 @@ pub fn generate_suite(item: TokenStream) -> TokenStream {
         quote! {
             #[test]
             fn #test_name() {
-                crate::#suite_name(crate::#name{
+                super::#suite_name(super::#name{
                     #(#fields)*
                 })
             }
