@@ -1,34 +1,34 @@
 use rtest::*;
 
 #[derive(PartialEq, Debug)]
-struct Test {
+struct UriLookupCase {
     a: i32,
-    b: i32,
+    b: String,
     c: i32,
     d: bool,
 }
 
-fn run_my_test(expected: Test) {
-    let actual = Test {
+fn run_contrived_test(input: UriLookupCase) {
+    let actual = UriLookupCase {
         a: 23,
-        b: 5,
+        b: String::from("asdf"),
         c: 5,
         d: true,
     };
-    assert_eq!(expected, actual)
+    assert_eq!(input, actual)
 }
 
-describe_suite!(
-    run_my_test,
-    Test {
+generate_suite!(
+    run_contrived_test,
+    UriLookupCase {
         a: 3,
-        b: 4,
+        b: String::from("asdf"),
         c: 5,
         d: false
     },
-    Test {
+    UriLookupCase {
         a: 23,
-        b: 5,
+        b: String::from("asdf"),
         c: 5,
         d: true
     }
