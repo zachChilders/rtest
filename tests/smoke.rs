@@ -1,15 +1,15 @@
-use rtest::*;
+use wd_40::*;
 
 #[derive(PartialEq, Debug)]
-struct UriLookupCase {
+struct TestCase {
     a: i32,
     b: String,
     c: i32,
     d: bool,
 }
 
-fn run_contrived_test(input: UriLookupCase) {
-    let actual = UriLookupCase {
+fn run_contrived_test(input: TestCase) {
+    let actual = TestCase {
         a: 23,
         b: String::from("asdf"),
         c: 5,
@@ -20,13 +20,13 @@ fn run_contrived_test(input: UriLookupCase) {
 
 generate_suite!(
     run_contrived_test,
-    UriLookupCase {
+    TestCase {
         a: 3,
         b: String::from("asdf"),
         c: 5,
         d: false
     },
-    UriLookupCase {
+    TestCase {
         a: 23,
         b: String::from("asdf"),
         c: 5,
