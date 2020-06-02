@@ -1,14 +1,15 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{braced, parse_macro_input, DeriveInput, Ident, Result, Token, Type, Lit};
+use syn::{braced, parse_macro_input, DeriveInput, Ident, Lit, Result, Token};
 
 #[derive(Debug)]
 struct SuiteInput {
-    name_of_test: Ident,
+    test_name: Ident,
+    comma: Token![,],
     tests: Punctuated<Test, Token![,]>,
 }
 
@@ -17,10 +18,9 @@ struct Test {
     ident: Ident,
     brace_token: syn::token::Brace,
     fields: Punctuated<Fields, Token![,]>,
-
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Fields {
     name: Ident,
     colon_token: Token![:],
@@ -29,9 +29,12 @@ struct Fields {
 
 impl Parse for SuiteInput {
     fn parse(input: ParseStream) -> Result<Self> {
-       // let test_function = input.parse_terminated(Ident::parse)?;
-        let tests = input.parse_terminated(Test::parse)?;  
+        let test_name = input.parse()?;
+        let comma = input.parse()?;
+        let tests = input.parse_terminated(Test::parse)?;
         Ok(SuiteInput {
+            test_name,
+            comma,
             tests,
         })
     }
@@ -43,7 +46,7 @@ impl Parse for Test {
 
         let ident = input.parse()?;
         let brace_token = braced!(content in input);
-        let fields = content.parse_terminated(Fields::parse)?;  
+        let fields = content.parse_terminated(Fields::parse)?;
 
         Ok(Test {
             ident,
@@ -65,20 +68,34 @@ impl Parse for Fields {
 
 #[proc_macro]
 pub fn describe_suite(item: TokenStream) -> TokenStream {
-    let suite_name = parse_macro_input!(item as SuiteInput);
-    println!("Suite: {:?}", suite_name);
+    let suite = parse_macro_input!(item as SuiteInput);
+    let suite_name = suite.test_name.clone();
+    println!("Suite: {:?}", suite);
 
-    // let suite = quote! {
-    //     #[cfg(test)]
-    //     mod #suite_name {
-    //         #[test]
-    //         fn test_name1() {
-    //             assert_eq!(43, 43);
-    //         }
-    //     }
-    // };
-    // suite.into()
-    TokenStream::new()
+    let tests = suite.tests.iter().enumerate().map(|(i, f)| {
+        let name = f.ident.clone();
+        let test_name = format_ident!("{}_{}", name.to_string().to_lowercase(), i.to_string());
+        let fields = f.fields.clone();
+        quote!{
+            #[test]
+            fn #test_name() {
+                crate::#suite_name(crate::#name{
+                    a:23,
+                    b: String::from("asdf"),
+                    c: String::from("aeou"),
+                    d: true,
+                })
+            }
+        }
+    });
+
+    let suite = quote! {
+        #[cfg(test)]
+        mod #suite_name {
+            #(#tests)*
+        }
+    };
+    suite.into()
 }
 
 #[proc_macro_derive(GenerateTestFn)]
@@ -107,9 +124,10 @@ pub fn derive_data_driven_test(item: TokenStream) -> TokenStream {
     });
 
     let test_fn = quote! {
-        impl Test {
-            fn equal(&self, expected: &Test) {
+        impl PartialEq for Test {
+            fn eq(&self, other: &Self) -> bool {
                 #(#assert)*
+                true
             }
         }
     };

@@ -1,38 +1,35 @@
 use rtest::*;
 
-
-#[derive(GenerateTestFn)]
+#[derive(PartialEq, Debug)]
 struct Test {
-    field1: i32,
-    field2: i32,
+    a: i32,
+    b: String,
+    c: String,
+    d: bool,
 }
 
-fn run_my_test() {
-    println!("Hello World!");
+fn run_my_test(expected: Test) {
+    let actual = Test {
+        a: 23,
+        b: String::from("asdf"),
+        c: String::from("aeou"),
+        d: true,
+    };
+    assert_eq!(expected, actual)
 }
 
 describe_suite!(
     run_my_test,
     Test {
         a: 3,
+        b: "asdf",
+        c: "aeou",
+        d: false
     },
     Test {
-        b: 4,
-        c: 5,
+        a: 23,
+        b: "asdf",
+        c: "asdf",
+        d: true
     }
 );
-
-#[test]
-fn run_constructed_test_function() {
-    let expected = Test {
-        field1: 32,
-        field2: 42,
-    };
-
-    let actual = Test {
-        field1: 32,
-        field2: 42,
-    };
-    expected.equal(&actual);
-    actual.equal(&expected);
-}
