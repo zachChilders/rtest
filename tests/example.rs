@@ -31,9 +31,6 @@ fn run_contrived_test(input: TestCase) {
     }
 }
 
-/// The magic macro takes in a Fn(T) -> void
-/// followed by any number of declarative test cases
-/// of your type T.
 generate_suite!(
     run_contrived_test,
     TestCase {
