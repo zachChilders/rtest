@@ -60,3 +60,9 @@ generate_suite!(
 
 ```
 
+## Future Work
+
+[] Improved error propagation
+[] `trybuild` tests
+[] Combinatric Test Case Construction
+[] Fluid Syntax
