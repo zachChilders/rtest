@@ -1,28 +1,19 @@
-# WD-40
+use wd_40::generate_suite;
 
-Data Driven Test Framework for Rust
-
-This crate is currently in active developement.
-
-[Data Driven Tests](https://en.wikipedia.org/wiki/Data-driven_testing) allow for a single parametric test to generate
-large numbers of test cases based on data being fed to it.  This allows a single logical test case to efficiently test and
-expose edge cases in application logic.
-
-## Usage
-
-See [example.rs](./tests/example.rs) for detailed usage info.  This file attempts to excercise all valid code paths.
-
-```rust
+/// Test name is derived from the name of your struct.  
+/// Having a struct to handle input is mandatory
 #[derive(PartialEq, Debug)]
 struct TestCase {
     a: i32,
     b: String,
     c: i32,
     d: bool,
-    should_fail: bool // should_fail is not required, but recommended.
+    should_fail: bool
 }
 
-// Any panics in here will cause a test failure.  Unwrap it all!
+/// Test function to run against all test cases
+/// It _must_ be of this type:
+/// `Fn(input: T);`
 fn run_contrived_test(input: TestCase) {
     // We construct a case here, but IRL you may want a helper function to return your data type.
     let actual = TestCase {
@@ -40,6 +31,9 @@ fn run_contrived_test(input: TestCase) {
     }
 }
 
+/// The magic macro takes in a Fn(T) -> void
+/// followed by any number of declarative test cases
+/// of your type T.
 generate_suite!(
     run_contrived_test,
     TestCase {
@@ -57,6 +51,3 @@ generate_suite!(
         should_fail: false
     }
 );
-
-```
-

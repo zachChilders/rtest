@@ -19,7 +19,6 @@ struct Test {
     fields: Punctuated<Field, Token![,]>,
 }
 
-
 #[derive(Clone, Debug)]
 struct Field {
     name: Ident,
@@ -68,15 +67,21 @@ impl Parse for Field {
     }
 }
 
+/// The magic macro takes in a Fn(T) -> void
+/// followed by any number of declarative test cases
+/// of your type T.
 #[proc_macro]
 pub fn generate_suite(item: TokenStream) -> TokenStream {
     let suite = parse_macro_input!(item as SuiteInput);
     let suite_name = suite.test_name.clone();
     //println!("Suite: {:?}", suite.tests);
 
+    // Generate inner test cases.
     let tests = suite.tests.iter().enumerate().map(|(i, f)| {
         let name = f.ident.clone();
         let test_name = format_ident!("{}_{}", name.to_string().to_lowercase(), i.to_string());
+
+        // Reconstruct test data
         let fields = f.fields.iter().map(|f| {
             let name = f.name.clone();
             let value = f.data.clone();
@@ -85,6 +90,7 @@ pub fn generate_suite(item: TokenStream) -> TokenStream {
             }
         });
 
+        // Construct test and pass TestCase to it
         quote! {
             #[test]
             fn #test_name() {
@@ -95,6 +101,7 @@ pub fn generate_suite(item: TokenStream) -> TokenStream {
         }
     });
 
+    // Wrap all test cases in a test module
     let suite = quote! {
         #[cfg(test)]
         mod #suite_name {
