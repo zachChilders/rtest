@@ -110,3 +110,57 @@ pub fn generate_suite(item: TokenStream) -> TokenStream {
     };
     suite.into()
 }
+
+#[derive(Debug)]
+struct CombineInput {
+    test_name: Ident,
+    tests: Punctuated<TestData, Token![,]>,
+}
+
+#[derive(Debug)]
+struct TestData {
+    type_name: Ident,
+    brace_token: syn::token::Brace,
+    data: Punctuated<Field, Token![,]>,
+}
+
+impl Parse for CombineInput {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let test_name = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let tests = input.parse_terminated(TestData::parse)?;
+
+        Ok(CombineInput {
+            test_name,
+            tests,
+        })
+    }
+}
+
+impl Parse for TestData {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+
+        let type_name = input.parse()?;
+        let brace_token = braced!(content in input);
+        let data = content.parse_terminated(Field::parse)?;
+
+        Ok(TestData {
+            type_name,
+            brace_token,
+            data,
+        })
+    }
+}
+
+#[proc_macro]
+pub fn combine(item: TokenStream) -> TokenStream {
+    let suite = parse_macro_input!(item as SuiteInput);
+
+
+    // Wrap all test cases in a test module
+    let suite = quote! {
+        fn test() {}
+    };
+    suite.into()
+}

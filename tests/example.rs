@@ -1,4 +1,4 @@
-use wd_40::generate_suite;
+use wd_40::*;
 
 /// Test name is derived from the name of your struct.  
 /// Having a struct to handle input is mandatory
